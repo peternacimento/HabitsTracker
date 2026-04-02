@@ -2,8 +2,33 @@ from fastapi import APIRouter, Response, Request, HTTPException, Depends
 from app.auth.schemas import UserRegister, UserLogin, AuthResponse, UserResponse
 from app.database import get_supabase_client, get_supabase_admin
 from app.auth.dependencies import get_current_user
+from app.config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def _is_secure() -> bool:
+    return get_settings().environment != "development"
+
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str):
+    secure = _is_secure()
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 30,
+    )
 
 
 @router.post("/register", response_model=AuthResponse)
@@ -12,8 +37,17 @@ async def register(data: UserRegister, response: Response):
     supabase = get_supabase_client()
 
     try:
+        # Pass the username in the metadata so the database trigger can catch it
         auth_response = supabase.auth.sign_up(
-            {"email": data.email, "password": data.password}
+            {
+                "email": data.email, 
+                "password": data.password,
+                "options": {
+                    "data": {
+                        "username": data.username
+                    }
+                }
+            }
         )
 
         if not auth_response.user:
@@ -21,36 +55,12 @@ async def register(data: UserRegister, response: Response):
 
         user_id = auth_response.user.id
 
-        # Cria perfil na tabela profiles
-        admin = get_supabase_admin()
-        admin.table("profiles").insert(
-            {
-                "id": user_id,
-                "username": data.username,
-                "email": data.email,
-                "total_xp": 0,
-                "level": 1,
-                "current_title": "Novato",
-            }
-        ).execute()
-
         # Set HttpOnly cookie
         if auth_response.session:
-            response.set_cookie(
-                key="access_token",
-                value=auth_response.session.access_token,
-                httponly=True,
-                secure=True,
-                samesite="lax",
-                max_age=60 * 60 * 24 * 7,  # 7 days
-            )
-            response.set_cookie(
-                key="refresh_token",
-                value=auth_response.session.refresh_token,
-                httponly=True,
-                secure=True,
-                samesite="lax",
-                max_age=60 * 60 * 24 * 30,  # 30 days
+            _set_auth_cookies(
+                response,
+                auth_response.session.access_token,
+                auth_response.session.refresh_token,
             )
 
         return AuthResponse(
@@ -92,21 +102,10 @@ async def login(data: UserLogin, response: Response):
 
         # Set HttpOnly cookies
         if auth_response.session:
-            response.set_cookie(
-                key="access_token",
-                value=auth_response.session.access_token,
-                httponly=True,
-                secure=True,
-                samesite="lax",
-                max_age=60 * 60 * 24 * 7,
-            )
-            response.set_cookie(
-                key="refresh_token",
-                value=auth_response.session.refresh_token,
-                httponly=True,
-                secure=True,
-                samesite="lax",
-                max_age=60 * 60 * 24 * 30,
+            _set_auth_cookies(
+                response,
+                auth_response.session.access_token,
+                auth_response.session.refresh_token,
             )
 
         return AuthResponse(
@@ -148,21 +147,10 @@ async def refresh_token(request: Request, response: Response):
         if not result.session:
             raise HTTPException(status_code=401, detail="Refresh token inválido")
 
-        response.set_cookie(
-            key="access_token",
-            value=result.session.access_token,
-            httponly=True,
-            secure=True,
-            samesite="lax",
-            max_age=60 * 60 * 24 * 7,
-        )
-        response.set_cookie(
-            key="refresh_token",
-            value=result.session.refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="lax",
-            max_age=60 * 60 * 24 * 30,
+        _set_auth_cookies(
+            response,
+            result.session.access_token,
+            result.session.refresh_token,
         )
         return {"message": "Token renovado com sucesso"}
     except HTTPException:
