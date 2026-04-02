@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
 
   async function checkAuth() {
     try {
-      const result = await api.getMe();
+      const result = await api.getMe({ silent: true });
       if (result?.user) {
         setUser(result.user);
       } else {

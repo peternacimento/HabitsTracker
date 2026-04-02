@@ -3,44 +3,46 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 let isRefreshing = false;
 
 async function request(endpoint, options = {}, retry = true) {
+  const { silent, ...fetchOptions } = options;
   const url = `${API_URL}${endpoint}`;
 
   const config = {
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...fetchOptions.headers,
     },
-    ...options,
+    ...fetchOptions,
   };
 
-  if (options.body && typeof options.body === 'object') {
-    config.body = JSON.stringify(options.body);
+  if (fetchOptions.body && typeof fetchOptions.body === 'object') {
+    config.body = JSON.stringify(fetchOptions.body);
   }
 
   const response = await fetch(url, config);
 
-  if (response.status === 401 && retry && !isRefreshing) {
-    // Tenta renovar o token antes de redirecionar
-    isRefreshing = true;
-    try {
-      const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (refreshRes.ok) {
-        isRefreshing = false;
-        return request(endpoint, options, false);
-      }
-    } catch {
-      // ignore
-    }
-    isRefreshing = false;
-    window.location.href = '/login';
-    throw new Error('Sessão expirada');
-  }
-
   if (response.status === 401) {
+    if (silent) {
+      throw new Error('Não autenticado');
+    }
+
+    if (retry && !isRefreshing) {
+      isRefreshing = true;
+      try {
+        const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (refreshRes.ok) {
+          isRefreshing = false;
+          return request(endpoint, options, false);
+        }
+      } catch {
+        // ignore
+      }
+      isRefreshing = false;
+    }
+
     window.location.href = '/login';
     throw new Error('Sessão expirada');
   }
@@ -59,7 +61,7 @@ export const api = {
   register: (data) => request('/auth/register', { method: 'POST', body: data }),
   login: (data) => request('/auth/login', { method: 'POST', body: data }),
   logout: () => request('/auth/logout', { method: 'POST' }),
-  getMe: () => request('/auth/me'),
+  getMe: (opts) => request('/auth/me', opts),
 
   // Habits
   checkin: (data) => request('/habits/checkin', { method: 'POST', body: data }),
