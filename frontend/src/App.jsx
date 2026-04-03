@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import NavBar from './components/layout/NavBar';
 import DashboardPage from './pages/DashboardPage';
 import StatsPage from './pages/StatsPage';
+import GoalsPage from './pages/GoalsPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
@@ -54,6 +55,14 @@ function AppLayout() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/goals"
+            element={
+              <ProtectedRoute>
+                <GoalsPage />
               </ProtectedRoute>
             }
           />

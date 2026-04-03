@@ -63,9 +63,16 @@ export const api = {
   logout: () => request('/auth/logout', { method: 'POST' }),
   getMe: (opts) => request('/auth/me', opts),
 
-  // Habits
+  // Habits (legacy stats/history)
   checkin: (data) => request('/habits/checkin', { method: 'POST', body: data }),
   getToday: () => request('/habits/today'),
   getStats: () => request('/habits/stats'),
   getHistory: (days = 30) => request(`/habits/history?days=${days}`),
+
+  // Goals (novo sistema de metas)
+  getGoals: () => request('/goals'),
+  createGoal: (data) => request('/goals', { method: 'POST', body: data }),
+  updateGoal: (id, data) => request(`/goals/${id}`, { method: 'PUT', body: data }),
+  deleteGoal: (id) => request(`/goals/${id}`, { method: 'DELETE' }),
+  toggleGoal: (habit_id) => request('/goals/toggle', { method: 'POST', body: { habit_id } }),
 };

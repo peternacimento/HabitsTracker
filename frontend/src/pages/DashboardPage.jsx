@@ -8,46 +8,51 @@ import StreakRing from '../components/dashboard/StreakRing';
 export default function DashboardPage() {
   const { refreshStats } = useAuth();
   const [stats, setStats] = useState(null);
+  const [habits, setHabits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [levelUp, setLevelUp] = useState(null);
 
-  const loadStats = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const data = await api.getStats();
-      setStats(data);
+      const [statsData, habitsData] = await Promise.all([
+        api.getStats(),
+        api.getGoals(),
+      ]);
+      setStats(statsData);
+      setHabits(habitsData || []);
     } catch (err) {
-      console.error('Erro ao carregar stats:', err);
+      console.error('Erro ao carregar dashboard:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  async function handleCheckin(habitStates) {
+  async function handleToggle(habitId) {
     try {
-      const result = await api.checkin(habitStates);
+      const result = await api.toggleGoal(habitId);
 
-      // Level up?
       if (result.level_up) {
-        setLevelUp({
-          level: result.new_level,
-          title: result.new_title,
-        });
+        setLevelUp({ level: result.new_level, title: result.new_title });
       }
 
-      // Refresh stats
-      await loadStats();
-      await refreshStats();
-    } catch (err) {
-      console.error('Erro no check-in:', err);
-    }
-  }
+      // Atualiza estado local do hábito imediatamente
+      setHabits((prev) =>
+        prev.map((h) =>
+          h.id === habitId ? { ...h, completed_today: result.completed } : h
+        )
+      );
 
-  function dismissLevelUp() {
-    setLevelUp(null);
+      // Atualiza stats em background
+      api.getStats().then(setStats).catch(() => {});
+      refreshStats();
+
+      return result;
+    } catch (err) {
+      console.error('Erro ao toglar hábito:', err);
+      return null;
+    }
   }
 
   if (loading) {
@@ -69,25 +74,21 @@ export default function DashboardPage() {
       />
 
       <QuestBoard
-        todayLog={stats?.today_log}
-        onCheckin={handleCheckin}
+        habits={habits}
+        onToggle={handleToggle}
         comboMultiplier={stats?.streak?.combo_multiplier || 1}
       />
 
-      {/* Level Up Overlay */}
       {levelUp && (
-        <div className="level-up-overlay" onClick={dismissLevelUp}>
+        <div className="level-up-overlay" onClick={() => setLevelUp(null)}>
           <div className="level-up-content">
             <div className="level-up-content__badge">🎉</div>
-            <div className="level-up-content__title text-gradient-xp">
-              LEVEL UP!
-            </div>
+            <div className="level-up-content__title text-gradient-xp">LEVEL UP!</div>
             <div className="level-up-content__subtitle">
-              Você alcançou o nível {levelUp.level}
-              <br />
+              Você alcançou o nível {levelUp.level}<br />
               <strong>{levelUp.title}</strong>
             </div>
-            <button className="btn btn--primary btn--large" onClick={dismissLevelUp}>
+            <button className="btn btn--primary btn--large" onClick={() => setLevelUp(null)}>
               CONTINUAR
             </button>
           </div>

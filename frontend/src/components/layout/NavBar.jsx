@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 
 const NAV_ITEMS = [
   { to: '/', icon: '⚔️', label: 'Quests' },
+  { to: '/goals', icon: '🎯', label: 'Metas' },
   { to: '/stats', icon: '📊', label: 'Stats' },
   { to: '/profile', icon: '👤', label: 'Perfil' },
 ];
@@ -14,6 +15,7 @@ export default function NavBar() {
           <NavLink
             key={item.to}
             to={item.to}
+            end={item.to === '/'}
             className={({ isActive }) =>
               `nav-bar__item ${isActive ? 'nav-bar__item--active' : ''}`
             }

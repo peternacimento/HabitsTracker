@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(where gh:*)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/peter/AppData/Local/Programs/**)",
+      "Read(//c/Users/peter/**)",
+      "Bash(git -C C:/Users/peter/Projetos/HabitsTracker remote -v)",
+      "Bash(cmd.exe /c \"where gh\")",
+      "Bash(cmd.exe:*)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(curl:*)",
+      "Bash(python -c ':*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Level:', d['level'], '| XP:', d['total_xp'], '| Streak:', d['streak']['current_days']\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('XP ganho:', d['total_xp'], '| Multiplicador:', d['multiplier'], '| Level up:', d['level_up']\\)\")"
+    ]
+  }
+}

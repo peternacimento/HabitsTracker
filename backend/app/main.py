@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from app.config import get_settings
 from app.auth.router import router as auth_router
 from app.habits.router import router as habits_router
+from app.goals.router import router as goals_router
 
 settings = get_settings()
 
@@ -36,6 +37,7 @@ app.add_middleware(
 # Routers
 app.include_router(auth_router)
 app.include_router(habits_router)
+app.include_router(goals_router)
 
 
 @app.get("/", tags=["Health"])
