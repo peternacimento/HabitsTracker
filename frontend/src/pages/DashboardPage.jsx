@@ -30,27 +30,36 @@ export default function DashboardPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   async function handleToggle(habitId) {
+    // Optimistic update: muda visual instantaneamente
+    const previousHabits = habits;
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === habitId ? { ...h, completed_today: !h.completed_today } : h
+      )
+    );
+
     try {
       const result = await api.toggleGoal(habitId);
 
-      if (result.level_up) {
-        setLevelUp({ level: result.new_level, title: result.new_title });
-      }
-
-      // Atualiza estado local do hábito imediatamente
+      // Sincroniza com o estado real do servidor
       setHabits((prev) =>
         prev.map((h) =>
           h.id === habitId ? { ...h, completed_today: result.completed } : h
         )
       );
 
-      // Atualiza stats em background
+      if (result.level_up) {
+        setLevelUp({ level: result.new_level, title: result.new_title });
+      }
+
       api.getStats().then(setStats).catch(() => {});
       refreshStats();
 
       return result;
     } catch (err) {
       console.error('Erro ao toglar hábito:', err);
+      // Reverte em caso de erro
+      setHabits(previousHabits);
       return null;
     }
   }

@@ -20,14 +20,23 @@ DEFAULT_HABITS = [
 
 def _ensure_habits(db, user_id: str) -> list:
     """Retorna hábitos ativos ou cria os padrões se não houver nenhum."""
-    result = (
-        db.table("user_habits")
-        .select("*")
-        .eq("user_id", user_id)
-        .eq("is_active", True)
-        .order("order_index")
-        .execute()
-    )
+    try:
+        result = (
+            db.table("user_habits")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("is_active", True)
+            .order("order_index")
+            .execute()
+        )
+    except Exception as e:
+        if "PGRST205" in str(e) or "user_habits" in str(e):
+            raise HTTPException(
+                status_code=503,
+                detail="Migration pendente: execute supabase/migrations/001_add_goals.sql no Supabase SQL Editor."
+            )
+        raise
+
     if result.data:
         return result.data
 
